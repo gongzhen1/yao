@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+            <title>Yao Setup</title>
+		<meta charset="utf-8" />
+		<link rel="icon" href="./favicon.ico" />
+            <link rel="stylesheet" href="./icon_font.css">
+            <link rel="stylesheet" href="./atom.min.css">
+		<meta name="viewport" content="width=device-width" />
+		<meta http-equiv="content-security-policy" content="">
+		<link href="./_app/immutable/assets/_layout-b57ce871.css" rel="stylesheet">
+		<link href="./_app/immutable/assets/_page-844a6ea5.css" rel="stylesheet">
+		<link rel="modulepreload" href="./_app/immutable/start-4fc46c18.js">
+		<link rel="modulepreload" href="./_app/immutable/chunks/index-6dd5f773.js">
+		<link rel="modulepreload" href="./_app/immutable/chunks/singletons-85c734d7.js">
+		<link rel="modulepreload" href="./_app/immutable/chunks/index-c217544c.js">
+		<link rel="modulepreload" href="./_app/immutable/components/pages/_layout.svelte-794c1e7d.js">
+		<link rel="modulepreload" href="./_app/immutable/modules/pages/_layout.ts-9cbb603b.js">
+		<link rel="modulepreload" href="./_app/immutable/chunks/_layout-da46b06b.js">
+		<link rel="modulepreload" href="./_app/immutable/components/pages/_page.svelte-8fbf6d05.js">
+	</head>
+	<body data-sveltekit-prefetch>
+		<div>
+
+
+<main><header class="header_wrap flex justify_center svelte-1doqyty">安装配置
+</header>
+<div class="tabs_wrap flex justify_center svelte-17hcqqw"><div class="tabs_items flex svelte-17hcqqw"><div class="tab_item flex justify_center align_center cursor_point transition_normal svelte-17hcqqw active"><span class="text">服务配置</span></div>
+            <div class="tab_item flex justify_center align_center cursor_point transition_normal svelte-17hcqqw"><span class="text">数据库配置</span></div></div></div>
+
+<div class="content_wrap"><div class="content transition_normal step_1" style="transform: translate(calc(-0 * (var(--content_width) + 3px)));"><form id="form_env" class="form flex_column"><div class="form_item flex flex_column"><div class="flex justify_between"><span class="name">语言</span>
+                  <span class="key">YAO_LANG</span></div>
+            <div class="value svelte-1xmjqyn">
+
+      
+
+      
+
+      
+
+      <select class="w_100 svelte-1xmjqyn" name="YAO_LANG" required><option value="中文">中文</option><option value="English">English</option></select>
+
+
+      
+
+      </div>
+      </div><div class="form_item flex flex_column"><div class="flex justify_between"><span class="name">启动模式</span>
+                  <span class="key">YAO_ENV</span></div>
+            <div class="value svelte-1xmjqyn">
+
+      
+
+      
+
+      
+
+      <select class="w_100 svelte-1xmjqyn" name="YAO_ENV" required><option value="开发模式(推荐)">开发模式(推荐)</option><option value="生产模式">生产模式</option></select>
+
+
+      
+
+      </div>
+      </div><div class="form_item flex flex_column"><div class="flex justify_between"><span class="name">监听端口</span>
+                  <span class="key">YAO_PORT</span></div>
+            <div class="value svelte-1xmjqyn">
+
+      
+
+      <input class="w_100 svelte-1xmjqyn" name="YAO_PORT" type="number" max="65535" placeholder="请输入number类型的值" value="5099" required>
+
+      
+
+      
+
+
+      
+
+      </div>
+      </div><div class="form_item flex flex_column"><div class="flex justify_between"><span class="name">Studio 端口</span>
+                  <span class="key">YAO_STUDIO_PORT</span></div>
+            <div class="value svelte-1xmjqyn">
+
+      
+
+      <input class="w_100 svelte-1xmjqyn" name="YAO_STUDIO_PORT" type="number" max="65535" placeholder="请输入number类型的值" value="5077" required>
+
+      
+
+      
+
+
+      
+
+      </div>
+      </div>
+
+      <div class="w_100 flex justify_center"><button class="btn_next btn_action cursor_point"><i class="icon-chevron-right"></i></button></div></form>
+            <form id="form_db" class="form flex_column"><div class="form_item flex flex_column"><div class="flex justify_between"><span class="name">数据库类型</span>
+                  <span class="key">type</span></div>
+            <div class="value svelte-1xmjqyn">
+
+      
+
+      
+
+      
+
+      <select class="w_100 svelte-1xmjqyn" name="type" required><option value="sqlite">sqlite</option><option value="mysql">mysql</option></select>
+
+
+      
+
+      </div>
+      </div>
+
+      <div class="form_item flex flex_column"><div class="flex justify_between"><span class="name">数据库文件地址</span>
+                  <span class="key">file</span></div>
+            <div class="value svelte-1xmjqyn"><input class="w_100 svelte-1xmjqyn" name="option.file" type="text" maxlength="60" placeholder="请输入string类型的值" value="db/yao.db" required>
+
+      
+
+      
+
+      
+
+      
+
+
+      
+
+      </div>
+      </div>
+
+      <div class="w_100 flex justify_between"><button class="btn_test btn_action cursor_point flex justify_center align_center"><i class="icon-wifi mr_6"></i>测试连接</button>
+            <div class="flex"><button class="btn_back btn_action cursor_point mr_12"><i class="icon-chevron-left"></i></button>
+                  <button class="btn_save btn_action cursor_point"><i class="icon-check"></i></button></div></div>
+
+
+      </form>
+            <div class="loading_wrap flex_column justify_center align_center svelte-1m3rhlt"><div class="lds-ring"><div></div>
+            <div></div>
+            <div></div>
+            <div></div></div>
+      <span class="mt_20">后台配置中</span></div>
+            <div class="success_wrap flex_column justify_center align_center svelte-6ewzn5"><i class="icon-check-circle svelte-6ewzn5"></i>
+     <span class="mt_12">配置成功</span></div></div></div></main>
+
+
+		<script type="module" data-sveltekit-hydrate="sdoatt">
+			import { start } from "./_app/immutable/start-4fc46c18.js";
+
+			start({
+				env: {},
+				paths: {"assets":"","base":""},
+				target: document.querySelector('[data-sveltekit-hydrate="sdoatt"]').parentNode,
+				version: "1731326042107",
+				hydrate: {
+					node_ids: [0, 2],
+					data: [null,null],
+					form: null,
+					error: null
+				}
+			});
+		</script>
+	</div>
+	</body>
+</html>
