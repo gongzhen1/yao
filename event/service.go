@@ -72,7 +72,7 @@ func init() {
 }
 
 // Register registers a handler for the given prefix.
-// Must be called before Start (typically in init()).
+// If the service has already started, the worker pool is created immediately.
 func Register(prefix string, handler types.Handler, opts ...types.HandlerOption) {
 	entry := &types.HandlerEntry{
 		Prefix:          prefix,
@@ -88,6 +88,9 @@ func Register(prefix string, handler types.Handler, opts ...types.HandlerOption)
 	svc.mu.Lock()
 	defer svc.mu.Unlock()
 	svc.handlers[prefix] = entry
+	if svc.started {
+		svc.pools[prefix] = newWorkerPool(entry)
+	}
 }
 
 // Start initializes and starts the event service.
@@ -172,11 +175,17 @@ func Stop(ctx context.Context) error {
 // Reload performs a hot-reload. Preserves queues and in-flight events,
 // reloads dynamic configuration only.
 func Reload() error {
-	svc.mu.RLock()
-	defer svc.mu.RUnlock()
+	svc.mu.Lock()
+	defer svc.mu.Unlock()
 
 	if !svc.started {
 		return ErrNotStarted
+	}
+
+	for prefix, entry := range svc.handlers {
+		if _, ok := svc.pools[prefix]; !ok {
+			svc.pools[prefix] = newWorkerPool(entry)
+		}
 	}
 	return nil
 }

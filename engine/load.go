@@ -30,10 +30,12 @@ import (
 	"github.com/yaoapp/yao/fs"
 	"github.com/yaoapp/yao/i18n"
 	"github.com/yaoapp/yao/kb"
+	localevent "github.com/yaoapp/yao/local/event"
 	"github.com/yaoapp/yao/mcp"
 	"github.com/yaoapp/yao/messenger"
 	"github.com/yaoapp/yao/moapi"
 	"github.com/yaoapp/yao/model"
+	"github.com/yaoapp/yao/mqtt"
 	"github.com/yaoapp/yao/openapi"
 	"github.com/yaoapp/yao/pack"
 	"github.com/yaoapp/yao/pipe"
@@ -52,7 +54,6 @@ import (
 	"github.com/yaoapp/yao/websocket"
 	"github.com/yaoapp/yao/widget"
 	"github.com/yaoapp/yao/widgets"
-	"github.com/yaoapp/yao/mqtt"
 
 	_ "github.com/yaoapp/yao/trace" // register trace handler/listener via init()
 )
@@ -323,7 +324,14 @@ func Load(cfg config.Config, options LoadOption, progressCallback ...func(string
 	if err != nil {
 		warnings = append(warnings, Warning{Widget: "MQTT", Error: err})
 	}
-	
+
+	// Load local events
+	err = loadStep("Event", func() error {
+		return localevent.Load()
+	}, callback)
+	if err != nil {
+		warnings = append(warnings, Warning{Widget: "Event", Error: err})
+	}
 
 	// Load schedules
 	err = loadStep("Schedule", func() error {
@@ -624,10 +632,13 @@ func Reload(cfg config.Config, options LoadOption) (err error) {
 	// Load mqs
 	err = mqtt.Load(cfg)
 	if err != nil {
-		printErr(cfg.Mode, "Mqs", err)
+		printErr(cfg.Mode, "MQTT Event", err)
 	}
 
-
+	err = localevent.Load()
+	if err != nil {
+		printErr(cfg.Mode, "Local Event", err)
+	}
 	// Load schedules
 	err = schedule.Load(cfg)
 	if err != nil {
