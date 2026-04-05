@@ -17,11 +17,10 @@ import (
 	"github.com/yaoapp/yao/config"
 	"github.com/yaoapp/yao/engine"
 	grpcclient "github.com/yaoapp/yao/grpc/client"
+	"github.com/yaoapp/yao/mqs/mqtt"
 	ischedule "github.com/yaoapp/yao/schedule"
 	"github.com/yaoapp/yao/share"
 	itask "github.com/yaoapp/yao/task"
-	"github.com/yaoapp/yao/mqtt"
-
 )
 
 var runSilent = false
@@ -194,7 +193,7 @@ func runLocal(args []string) {
 	// Start Tasks
 	itask.Start()
 	defer itask.Stop()
-	
+
 	// Start MQTTS
 	mqtt.Start()
 	defer mqtt.Stop()

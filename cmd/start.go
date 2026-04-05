@@ -27,13 +27,13 @@ import (
 	yaogrpc "github.com/yaoapp/yao/grpc"
 	_ "github.com/yaoapp/yao/grpc/auth"
 	sandboxhandler "github.com/yaoapp/yao/grpc/sandbox"
+	"github.com/yaoapp/yao/mqs/mqtt"
 	"github.com/yaoapp/yao/openapi"
 	sandbox "github.com/yaoapp/yao/sandbox/v2"
 	ischedule "github.com/yaoapp/yao/schedule"
 	"github.com/yaoapp/yao/service"
 	"github.com/yaoapp/yao/setup"
 	"github.com/yaoapp/yao/share"
-	"github.com/yaoapp/yao/mqtt"
 	itask "github.com/yaoapp/yao/task"
 )
 
