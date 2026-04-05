@@ -523,10 +523,11 @@ artifacts-linux: clean
 #	Building CUI v1.0
 	export NODE_ENV=production
 # 	rm -f ../cui-v1.0/pnpm-lock.yaml
-	echo "BASE=__yao_admin_root" > ../cui-v1.0/packages/cui/.env
-	cd ../cui-v1.0 && pnpm install --no-frozen-lockfile && pnpm run build
+	echo "BASE=__yao_admin_root" > /home/code/cui-v1.0/packages/cui/.env
+	cd /home/code/cui-v1.0 && pnpm install --no-frozen-lockfile && pnpm run build
 
 #	Init Application
+	cd /home/project/yaocodes/yao/
 	cd ../yao-init && rm -rf .git
 	cd ../yao-init && rm -rf .gitignore
 	cd ../yao-init && rm -rf LICENSE
@@ -551,7 +552,9 @@ artifacts-linux: clean
 #   ** new repository: https://github.com/YaoApp/cui.git **
 	mkdir -p .tmp/data/cui
 	cp -r ./ui .tmp/data/ui
-	cp -r ../cui-v1.0/packages/cui/dist .tmp/data/cui/v1.0
+	cp -r /home/code/cui-v1.0/packages/cui/dist .tmp/data/cui/v1.0
+	cd /home/project/yaocodes/yao/
+	
 	cp -r ../yao-init .tmp/data/init
 	cp -r yao .tmp/data/
 	cp -r sui/libsui .tmp/data/
@@ -560,9 +563,9 @@ artifacts-linux: clean
 
 #	Replace PRVERSION
 	sed -ie "s/const PRVERSION = \"DEV\"/const PRVERSION = \"${COMMIT}-${NOW}\"/g" share/const.go
-	@CUI_COMMIT=$$(cd ../cui-v1.0 && git log | head -n 1 | awk '{print substr($$2, 0, 12)}') && \
+	@CUI_COMMIT=$$(cd /home/code/cui-v1.0 && git log | head -n 1 | awk '{print substr($$2, 0, 12)}') && \
 	sed -ie "s/const PRCUI = \"DEV\"/const PRCUI = \"$$CUI_COMMIT-${NOW}\"/g" share/const.go
-
+	cd /home/project/yaocodes/yao/
 #   Making artifacts - dev builds (full debug symbols, ~158M)
 	mkdir -p dist
 	CGO_ENABLED=1 CGO_LDFLAGS="-static" GOOS=linux GOARCH=amd64 go build -v -o dist/yao-${VERSION}-unstable-linux-amd64
@@ -645,7 +648,7 @@ artifacts-macos: clean
 #   Making artifacts - prod builds (stripped, no UPX on macOS)
 	sed -i.tmp 's/const BUILDOPTIONS = ""/const BUILDOPTIONS = "-s -w (production, stripped)"/g' share/const.go && rm -f share/const.go.tmp
 	CGO_ENABLED=1 GOOS=darwin GOARCH=amd64 go build -v -ldflags="-s -w" -o dist/yao-${VERSION}-unstable-darwin-amd64-prod
-	CGO_ENABLED=1 GOOS=darwin GOARCH=arm64 go build -v -ldflags="-s -w" -o dist/yao-${VERSION}-unstable-darwin-arm64-prod
+#	CGO_ENABLED=1 GOOS=darwin GOARCH=arm64 go build -v -ldflags="-s -w" -o dist/yao-${VERSION}-unstable-darwin-arm64-prod
 
 	mkdir -p dist/release
 	mv dist/yao-*-* dist/release/
@@ -911,3 +914,7 @@ clean:
 	rm -rf ./tmp
 	rm -rf .tmp
 	rm -rf dist
+build:
+	rm -rf dist/release/yao
+	CGO_ENABLED=1 CGO_LDFLAGS="-static" go build -v -o dist/release/yao
+	chmod +x  dist/release/yao	

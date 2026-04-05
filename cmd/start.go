@@ -33,7 +33,7 @@ import (
 	"github.com/yaoapp/yao/service"
 	"github.com/yaoapp/yao/setup"
 	"github.com/yaoapp/yao/share"
-
+	"github.com/yaoapp/yao/mqtt"
 	itask "github.com/yaoapp/yao/task"
 )
 
@@ -174,6 +174,10 @@ var startCmd = &cobra.Command{
 		itask.Start()
 		defer itask.Stop()
 
+		// Start MQTTS
+		mqtt.Start()
+		defer mqtt.Stop()
+
 		// Start Schedules
 		ischedule.Start()
 		defer ischedule.Stop()
@@ -242,7 +246,9 @@ var startCmd = &cobra.Command{
 
 		// Start watching
 		watchDone := make(chan uint8, 1)
+		fmt.Println(color.GreenString("mode:%s startDisableWatching:%s..."), mode, startDisableWatching)
 		if mode == "development" && !startDisableWatching {
+			fmt.Println(color.GreenString("启动文件系统监视器..."))
 			go svc.Watch(watchDone)
 		}
 

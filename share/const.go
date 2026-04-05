@@ -4,13 +4,13 @@ package share
 const VERSION = "1.0.0"
 
 // PRVERSION Yao App Engine PR Commit
-const PRVERSION = "DEV"
+const PRVERSION = "3a58b7aef3f5-2026-03-14T12:40:27+0000"
 
 // CUI Version
 const CUI = "1.0.0"
 
 // PRCUI CUI PR Commit
-const PRCUI = "DEV"
+const PRCUI = "df6d4b1ae052-2026-03-14T12:44:51+0000"
 
 // BUILDOPTIONS Build options (e.g., "-s -w", "-s -w +upx")
 const BUILDOPTIONS = ""

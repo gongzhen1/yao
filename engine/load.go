@@ -52,6 +52,7 @@ import (
 	"github.com/yaoapp/yao/websocket"
 	"github.com/yaoapp/yao/widget"
 	"github.com/yaoapp/yao/widgets"
+	"github.com/yaoapp/yao/mqtt"
 
 	_ "github.com/yaoapp/yao/trace" // register trace handler/listener via init()
 )
@@ -314,6 +315,15 @@ func Load(cfg config.Config, options LoadOption, progressCallback ...func(string
 	if err != nil {
 		warnings = append(warnings, Warning{Widget: "Task", Error: err})
 	}
+
+	// Load mqtt
+	err = loadStep("MQTT", func() error {
+		return mqtt.Load(cfg)
+	}, callback)
+	if err != nil {
+		warnings = append(warnings, Warning{Widget: "MQTT", Error: err})
+	}
+	
 
 	// Load schedules
 	err = loadStep("Schedule", func() error {
@@ -610,6 +620,13 @@ func Reload(cfg config.Config, options LoadOption) (err error) {
 	if err != nil {
 		printErr(cfg.Mode, "Task", err)
 	}
+
+	// Load mqs
+	err = mqtt.Load(cfg)
+	if err != nil {
+		printErr(cfg.Mode, "Mqs", err)
+	}
+
 
 	// Load schedules
 	err = schedule.Load(cfg)
