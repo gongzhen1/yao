@@ -15,11 +15,11 @@
 
 ### 配置文件位置
 
-将 MQTT 配置文件放在 `mqs/` 目录中，文件名格式为 `*.mq.yao` 或 `*.mq.json`。
+将 MQTT 配置文件放在 `mqs/` 目录中，文件名格式为 `*.mqtt.yao` 或 `*.mqtt.json`。
 
 ### 配置示例
 
-`mqs/test.mq.yao`:
+`mqs/test.mqtt.yao`:
 
 ```json
 {
@@ -149,7 +149,7 @@ function send(params) {
 
 ### 本地事件脚本处理
 
-创建脚本文件 `scripts/custom/event.yao`:
+创建脚本文件 `scripts/custom/event.ts`:
 
 ```javascript
 /**
@@ -157,16 +157,53 @@ function send(params) {
  * 当本地事件被发送时触发
  */
 function onEvent(...args) {
-    for (let i = 1; i < 100; i++) {
-        log.Info("onEvent " + i, args);
-    }
+    log.Info("onEvent: ", args);
 }
 
 /**
  * 发送本地事件示例
- * 触发 LOCAL_EV 事件 10 次
+ * 触发 LOCAL_EV 事件
  */
 function send() {
+    Process("event.publish", "LOCAL_EV", { "msg": "Hello Event: LOCAL_EV" })
+    return ""
+}
+
+/**
+ * 发送 SUB_LOCAL_EV 事件示例
+ */
+function send2() {
+    Process("event.publish", "SUB_LOCAL_EV", { "msg": "Hello Event: SUB_LOCAL_EV" })
+    return ""
+}
+
+/**
+ * 动态订阅事件示例
+ * 订阅 SUB_LOCAL_EV 事件，指定处理函数为 onEvent
+ * @returns {string} 订阅ID，用于后续取消订阅
+ */
+function subscribe() {
+    let uid = Process("event.subscribe", "SUB_LOCAL_EV", "scripts.custom.event.onEvent");
+    return uid
+}
+
+/**
+ * 取消订阅事件示例
+ * 根据订阅ID取消事件订阅
+ * @param {object} params - 参数对象，包含订阅ID
+ * @param {string} params.id - 订阅ID
+ * @returns {boolean} 取消订阅是否成功
+ */
+function unSubscribe(params) {
+    let res = Process("event.unSubscribe", params.id);
+    return res
+}
+
+/**
+ * 发送本地事件示例（旧版本）
+ * 触发 LOCAL_EV 事件 10 次
+ */
+function sendOld() {
     for (let i = 1; i < 10; i++) {
         Process("event.publish", "LOCAL_EV", { "msg": "Hello Event " + i })
     }
@@ -212,7 +249,24 @@ for (let i = 1; i <= 10; i++) {
 }
 ```
 
-### 3. MQTT 消息接收与处理
+### 3. 动态事件订阅与取消订阅
+
+```javascript
+// 动态订阅事件
+let subscriptionId = Process("event.subscribe", "USER_LOGIN_EVENT", "scripts.user.onLogin");
+
+// 发送事件触发订阅的处理函数
+Process("event.publish", "USER_LOGIN_EVENT", { 
+    "user_id": 123, 
+    "username": "john_doe" 
+});
+
+// 取消订阅事件
+let unsubscribeResult = Process("event.unSubscribe", subscriptionId);
+log.Info("Unsubscribe result", unsubscribeResult);
+```
+
+### 4. MQTT 消息接收与处理
 
 配置的 process 会自动被调用：
 
@@ -240,7 +294,7 @@ function receive(topic, params, ts) {
 }
 ```
 
-### 4. 事件处理函数
+### 5. 事件处理函数
 
 ```javascript
 /**
@@ -263,24 +317,7 @@ function onEvent(...args) {
 
 ---
 
-## 最佳实践
-
-### 1. 文件组织
-
-```
-mqs/
-├── mqtt.test.yao          # MQTT 配置
-├── mqtt.device.yao        # 另一个 MQTT 配置
-├── event.local.yao        # 本地事件配置 1
-└── event.alert.yao        # 本地事件配置 2
-
-scripts/
-└── custom/
-    ├── mqtt.yao           # MQTT 处理脚本
-    └── event.yao          # 事件处理脚本
-```
-
-### 2. 性能优化
+### 1. 性能优化
 
 - **资源配置**：根据消息吞吐量调整 `max_workers` 和 `queue_size`
 - **高频处理**：设置较高的 `max_workers` 和 `queue_size`
@@ -295,7 +332,7 @@ scripts/
 }
 ```
 
-### 3. 错误处理
+### 2. 错误处理
 
 ```javascript
 function receive(topic, params, ts) {
@@ -310,7 +347,7 @@ function receive(topic, params, ts) {
 }
 ```
 
-### 4. 日志记录
+### 3. 日志记录
 
 ```javascript
 function onEvent(...args) {
@@ -321,7 +358,7 @@ function onEvent(...args) {
 }
 ```
 
-### 5. 配置安全
+### 4. 配置安全
 
 - **不在配置文件中暴露密码**（考虑使用环境变量）
 - **限制 MQTT Broker 访问权限**
@@ -383,6 +420,19 @@ A: 使用 QoS 1 或 2 确保消息可靠性：
 }
 ```
 
+### Q: 动态订阅和配置文件订阅有什么区别？
+
+A: 
+- **配置文件订阅**：在 `*.event.yao` 配置文件中定义，是持久化的订阅，应用启动时自动生效
+- **动态订阅**：通过 `event.subscribe()` 在运行时动态创建，可以随时订阅和取消订阅，适合临时性的事件处理需求
+
+### Q: 动态订阅的事件处理函数有什么要求？
+
+A: 动态订阅的事件处理函数需要满足以下要求：
+1. 必须是有效的 process 路径（如 `scripts.custom.event.onEvent`）
+2. 函数签名应为 `function onEvent(...args)`，可以接收任意参数
+3. 函数需要在对应的脚本文件中定义
+
 ---
 
 ## 参考资源
@@ -393,4 +443,4 @@ A: 使用 QoS 1 或 2 确保消息可靠性：
 
 ---
 
-**最后更新**: 2026-04-05
+**最后更新**: 2026-04-06
