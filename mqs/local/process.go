@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"strings"
+	"sync"
 
 	"github.com/yaoapp/gou/application"
 	"github.com/yaoapp/gou/process"
@@ -15,13 +16,18 @@ import (
 )
 
 var ProcessHandlers = map[string]process.Handler{
-	"publish":   processEventPublish,
-	"subscribe": processEventSubscribe,
+	"publish":     processEventPublish,
+	"subscribe":   processEventSubscribe,
+	"unSubscribe": processEventUnsubscribe,
 }
 
 func init() {
 	process.RegisterGroup("event", ProcessHandlers)
 }
+
+// 用于存储动态订阅的处理器
+var dynamicHandlers = make(map[string]bool)
+var dynamicHandlersMutex sync.RWMutex
 
 // Load 加载所有本地事件监听配置
 func Load() error {
@@ -141,7 +147,7 @@ func processEventPublish(proc *process.Process) interface{} {
 	return true
 }
 
-// processEventSubscribe 本地事件订阅
+// processEventSubscribe 本地事件订阅 (动态订阅)
 // 参数: pattern, process
 func processEventSubscribe(proc *process.Process) interface{} {
 	args := proc.Args
@@ -159,9 +165,103 @@ func processEventSubscribe(proc *process.Process) interface{} {
 		exception.New("process must be string", 400).Throw()
 	}
 
-	listener := &eventListener{processName: processName}
-	yaoevent.Listen(pattern, listener)
+	// 提取事件前缀（第一个点之前的部分）
+	prefix := extractPrefix(pattern)
+
+	// 确保前缀有处理器注册
+	dynamicHandlersMutex.Lock()
+	if !dynamicHandlers[prefix] {
+		// 注册一个通用的处理器来处理这个前缀的事件
+		handler := &dynamicEventHandler{}
+		yaoevent.Register(prefix, handler)
+		dynamicHandlers[prefix] = true
+		log.Trace("[Event] registered dynamic handler for prefix: %s", prefix)
+	}
+	dynamicHandlersMutex.Unlock()
+
+	// 创建通道 (可配置缓冲区大小，默认256)
+	bufferSize := 256
+	if len(args) > 2 {
+		if bs, ok := args[2].(float64); ok {
+			bufferSize = int(bs)
+		}
+	}
+	ch := make(chan *types.Event, bufferSize)
+
+	// 订阅事件
+	subID := yaoevent.Subscribe(pattern, ch)
+
+	// 启动goroutine处理事件
+	go func() {
+		for ev := range ch {
+			p, err := process.Of(processName, ev.Type, ev.Payload)
+			if err != nil {
+				log.Error("event subscribe process %s create failed: %v", processName, err)
+				continue
+			}
+			if err := p.Execute(); err != nil {
+				log.Error("event subscribe process %s execute failed: %v", processName, err)
+			}
+			p.Release()
+		}
+	}()
+
+	return subID
+}
+
+// processEventUnsubscribe 取消订阅本地事件
+// 参数: subID
+func processEventUnsubscribe(proc *process.Process) interface{} {
+	args := proc.Args
+	if len(args) < 1 {
+		exception.New("event.unsubscribe requires 1 argument: subID", 400).Throw()
+	}
+
+	subID, ok := args[0].(string)
+	if !ok {
+		exception.New("subID must be string", 400).Throw()
+	}
+
+	yaoevent.Unsubscribe(subID)
 	return true
+}
+
+// extractPrefix 从事件模式中提取前缀
+func extractPrefix(pattern string) string {
+	// 如果模式是 "*"，返回一个通用的前缀
+	if pattern == "*" {
+		return "dynamic"
+	}
+
+	// 如果模式包含 ".*"，提取前缀部分
+	if strings.HasSuffix(pattern, ".*") {
+		prefix := strings.TrimSuffix(pattern, ".*")
+		if prefix == "" {
+			return "dynamic"
+		}
+		return prefix
+	}
+
+	// 如果模式是具体的事件类型，提取第一个点之前的部分
+	if i := strings.Index(pattern, "."); i > 0 {
+		return pattern[:i]
+	}
+
+	// 如果没有点，直接返回模式
+	return pattern
+}
+
+// dynamicEventHandler 动态事件处理器
+type dynamicEventHandler struct{}
+
+func (h *dynamicEventHandler) Handle(ctx context.Context, ev *types.Event, resp chan<- types.Result) {
+	// 动态处理器不需要做任何处理，只是为了让事件能够被发布
+	// 实际的事件处理由订阅者完成
+	resp <- types.Result{}
+}
+
+func (h *dynamicEventHandler) Shutdown(ctx context.Context) error {
+	return nil
 }
 
 // eventListener 用于 Listen 监听
