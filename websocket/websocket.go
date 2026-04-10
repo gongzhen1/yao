@@ -1,38 +1,58 @@
 package websocket
 
 import (
+	"github.com/yaoapp/gou/application"
+	"github.com/yaoapp/gou/websocket"
+	"github.com/yaoapp/kun/log"
 	"github.com/yaoapp/yao/config"
+	"github.com/yaoapp/yao/share"
 )
 
-// Load 加载API
+// Load 加载websocket
 func Load(cfg config.Config) error {
-	// exts := []string{"*.http.yao", "*.http.json", "*.http.jsonc"}
-	// return application.App.Walk("websockets", func(root, file string, isdir bool) error {
-	// 	_, err := websocket.Load(file, share.ID(root, file))
-	// 	return err
-	// }, exts...)
 
-	// var root = filepath.Join(cfg.Root, "websockets")
-	// return LoadFrom(root, "")
+	// 加载服务端
+	exists, err := application.App.Exists("apis")
+	if err != nil {
+		return err
+	}
+	if !exists {
+		log.Trace("[websockets] websockets directory not found, skip")
+		return nil
+	}
+	exts := []string{"*.ws.json", "*.ws.yao", "*.ws.jsonc"}
+	err = application.App.Walk("apis", func(root, filename string, isdir bool) error {
+		if isdir {
+			return nil
+		}
+		content := share.ReadFile(filename)
+		_, err := websocket.LoadWebSocketServer(string(content), share.ID(root, filename))
+		if err != nil {
+			log.With(log.F{"root": root, "file": filename}).Error(err.Error())
+		}
+		return nil // 继续加载其他文件
+	}, exts...)
 
-	return nil
+	// 加载客户端
+	exists, err = application.App.Exists("websockets")
+	if err != nil {
+		return err
+	}
+	if !exists {
+		log.Trace("[websockets] websockets directory not found, skip")
+		return nil
+	}
+	exts = []string{"*.ws.json", "*.ws.yao", "*.ws.jsonc"}
+	err = application.App.Walk("websockets", func(root, file string, isdir bool) error {
+		if isdir {
+			return nil
+		}
+		_, err := websocket.LoadWebSocket(file, share.ID(root, file))
+		if err != nil {
+			log.With(log.F{"root": root, "file": file}).Error(err.Error())
+		}
+		return nil // 继续加载其他文件
+	}, exts...)
+	return err
+	return err
 }
-
-// // LoadFrom 从特定目录加载
-// func LoadFrom(dir string, prefix string) error {
-
-// 	if share.DirNotExists(dir) {
-// 		return fmt.Errorf("%s does not exists", dir)
-// 	}
-
-// 	err := share.Walk(dir, ".ws.json", func(root, filename string) {
-// 		name := prefix + share.SpecName(root, filename)
-// 		content := share.ReadFile(filename)
-// 		_, err := gou.LoadWebSocket(string(content), name)
-// 		if err != nil {
-// 			log.With(log.F{"root": root, "file": filename}).Error(err.Error())
-// 		}
-// 	})
-
-// 	return err
-// }
