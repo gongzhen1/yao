@@ -70,6 +70,7 @@ func Init() {
 	process.Register("utils.str.Join", str.ProcessJoin)
 	process.Register("utils.str.JoinPath", str.ProcessJoinPath)
 	process.Register("utils.str.UUID", str.ProcessUUID)
+	process.Register("utils.str.SFID", str.ProcessSnowflake)
 	process.Register("utils.str.Pinyin", str.ProcessPinyin)
 
 	// Array

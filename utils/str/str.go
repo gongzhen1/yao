@@ -2,12 +2,16 @@ package str
 
 import (
 	"fmt"
+	"math/rand"
 	"path/filepath"
 	"strings"
+	"time"
 
+	"github.com/bwmarrin/snowflake"
 	"github.com/google/uuid"
 	"github.com/mozillazg/go-pinyin"
 	"github.com/yaoapp/gou/process"
+	"github.com/yaoapp/kun/exception"
 	"github.com/yaoapp/kun/maps"
 )
 
@@ -144,4 +148,48 @@ func fixToneNumberPosition(s string) string {
 		}
 	}
 	return s // No digit found, return as is
+}
+
+// ProcessSnowflake utils.str.SFID, generates a unique ID using the Snowflake algorithm
+// Args:
+//   - arg[0]: int (optional), number of IDs to generate, default 1
+//
+// Returns:
+//
+// int64 or []int64: single 20-digit snowflake ID or array of IDs
+func ProcessSnowflake(process *process.Process) interface{} {
+	count := 1
+	if process.NumOfArgs() > 0 {
+		count = process.ArgsInt(0)
+		if count < 1 {
+			count = 1
+		}
+	}
+
+	// Generate node ID based on machine identifier
+	nodeID := generateNodeID()
+
+	node, err := snowflake.NewNode(nodeID)
+	if err != nil {
+		exception.New("雪花算法初始化失败: %s", 500, err).Throw()
+	}
+
+	// Generate IDs
+	if count == 1 {
+		id := node.Generate()
+		return id.Int64()
+	}
+
+	ids := make([]int64, count)
+	for i := 0; i < count; i++ {
+		id := node.Generate()
+		ids[i] = id.Int64()
+	}
+	return ids
+}
+
+// generateNodeID generates a node ID based on machine identifier
+func generateNodeID() int64 {
+	rand.Seed(time.Now().UnixNano())
+	return int64(rand.Intn(1023)) // Snowflake node ID range is 0-1023
 }
