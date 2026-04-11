@@ -13,7 +13,7 @@ import (
 
 // Load load schedule
 func Load(cfg config.Config) error {
-
+	Stop()
 	// Ignore if the tasks directory does not exist
 	exists, err := application.App.Exists("schedules")
 	if err != nil {

@@ -640,10 +640,12 @@ func Reload(cfg config.Config, options LoadOption) (err error) {
 		printErr(cfg.Mode, "Local Event", err)
 	}
 	// Load schedules
+	schedule.Stop()
 	err = schedule.Load(cfg)
 	if err != nil {
 		printErr(cfg.Mode, "Schedule", err)
 	}
+	schedule.Start()
 
 	// Load Custom Widget
 	err = widget.Load(cfg)
