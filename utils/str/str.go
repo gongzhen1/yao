@@ -15,6 +15,13 @@ import (
 	"github.com/yaoapp/kun/maps"
 )
 
+func init() {
+	// 设置 epoch 为 2020-01-01 00:00:00 UTC
+	snowflake.Epoch = 1577836800000
+	// 或者直接使用 Twitter 原版 epoch
+	// snowflake.Epoch = 1288834974657
+}
+
 // ProcessJoin utils.str.Join
 func ProcessJoin(process *process.Process) interface{} {
 	process.ValidateArgNums(2)
@@ -177,13 +184,13 @@ func ProcessSnowflake(process *process.Process) interface{} {
 	// Generate IDs
 	if count == 1 {
 		id := node.Generate()
-		return id.Int64()
+		return id.String()
 	}
 
-	ids := make([]int64, count)
+	ids := make([]string, count)
 	for i := 0; i < count; i++ {
 		id := node.Generate()
-		ids[i] = id.Int64()
+		ids[i] = id.String()
 	}
 	return ids
 }
