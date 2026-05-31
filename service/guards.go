@@ -82,6 +82,9 @@ func guardCookieJWT(c *gin.Context) {
 // guardBearerJWT validates Bearer JWT token from Authorization header
 func guardBearerJWT(c *gin.Context) {
 	tokenString := c.Request.Header.Get("Authorization")
+	if tokenString == "" || tokenString == "Bearer undefined" {
+		tokenString, _ = c.Cookie("__tk")
+	}
 	tokenString = strings.TrimSpace(strings.TrimPrefix(tokenString, "Bearer "))
 	if tokenString == "" {
 		c.JSON(403, gin.H{"code": 403, "message": "Not Authorized"})

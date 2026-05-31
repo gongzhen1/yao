@@ -23,6 +23,7 @@ var loginTypes = map[string]string{
 
 func exportProcess() {
 	process.Register("yao.login.admin", processLoginAdmin)
+	process.Register("yao.login.userid", processLoginByUserID)
 }
 
 // processLoginAdmin yao.admin.login 用户登录
@@ -113,6 +114,58 @@ func auth(field string, value string, password string, sid string) maps.Map {
 	session.Global().Expire(time.Duration(token.ExpiresAt)*time.Second).ID(sid).Set("issuer", "yao")
 
 	// Get user menus
+	menus := process.New("yao.app.menu").WithSID(sid).Run()
+	return maps.Map{
+		"expires_at": token.ExpiresAt,
+		"token":      token.Token,
+		"user":       row,
+		"menus":      menus,
+	}
+}
+
+// processLoginByUserID yao.login.userid 通过用户ID免登录
+func processLoginByUserID(p *process.Process) interface{} {
+	p.ValidateArgNums(1)
+	userID := p.ArgsInt(0)
+
+	sid := session.ID()
+	if csid, ok := p.Args[1].(string); ok && csid != "" {
+		sid = csid
+	}
+
+	user := model.Select("admin.user")
+	rows, err := user.Get(model.QueryParam{
+		Select: []interface{}{"id", "name", "type", "email", "mobile", "extra", "status"},
+		Limit:  1,
+		Wheres: []model.QueryWhere{
+			{Column: "id", Value: userID},
+			{Column: "status", Value: "enabled"},
+		},
+	})
+
+	if err != nil {
+		exception.New("Database query error", 500).Throw()
+	}
+
+	if len(rows) == 0 {
+		exception.New("User not found (id: %d)", 404, userID).Throw()
+	}
+
+	row := rows[0]
+	expiresAt := time.Now().Unix() + 3600*8
+
+	id := any.Of(row.Get("id")).CInt()
+	token := helper.JwtMake(id, map[string]interface{}{}, map[string]interface{}{
+		"expires_at": expiresAt,
+		"sid":        sid,
+		"issuer":     "yao",
+	})
+
+	log.Debug("[login] userid sid=%s", sid)
+	session.Global().Expire(time.Duration(token.ExpiresAt)*time.Second).ID(sid).Set("user_id", id)
+	session.Global().Expire(time.Duration(token.ExpiresAt)*time.Second).ID(sid).Set("user", row)
+	session.Global().Expire(time.Duration(token.ExpiresAt)*time.Second).ID(sid).Set("issuer", "yao")
+
 	menus := process.New("yao.app.menu").WithSID(sid).Run()
 	return maps.Map{
 		"expires_at": token.ExpiresAt,
