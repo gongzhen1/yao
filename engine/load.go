@@ -35,6 +35,7 @@ import (
 	"github.com/yaoapp/yao/moapi"
 	"github.com/yaoapp/yao/model"
 	localevent "github.com/yaoapp/yao/mqs/local"
+	_ "github.com/yaoapp/yao/mqs/mail" // register mail.send process handler
 	"github.com/yaoapp/yao/mqs/mqtt"
 	"github.com/yaoapp/yao/openapi"
 	"github.com/yaoapp/yao/pack"
