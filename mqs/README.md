@@ -6,6 +6,7 @@
 
 - [MQTT 配置](#mqtt-配置)
 - [本地事件配置](#本地事件配置)
+- [邮件发送](#邮件发送)
 - [脚本示例](#脚本示例)
 - [最佳实践](#最佳实践)
 
@@ -208,6 +209,140 @@ function sendOld() {
         Process("event.publish", "LOCAL_EV", { "msg": "Hello Event " + i })
     }
     return ""
+}
+```
+
+---
+
+## 邮件发送
+
+通过 `mail.send` 处理器，可以在脚本中直接发送邮件。该处理器封装了 Messenger 服务的邮件发送能力，无需额外配置文件。
+
+### 处理器参数说明
+
+| 参数 | 类型 | 必需 | 说明 |
+|------|------|------|------|
+| `channel` | string | ✓ | Messenger 通道名称（如 `"email"`） |
+| `to` | string/array | ✓ | 收件人邮箱地址或地址列表 |
+| `subject` | string | ✓ | 邮件主题 |
+| `body` | string | ✓ | 纯文本邮件内容 |
+| `html` | string | ✗ | HTML 格式邮件内容 |
+| `attachments` | array | ✗ | 附件列表 |
+
+#### 附件对象参数
+
+| 参数 | 类型 | 必需 | 说明 |
+|------|------|------|------|
+| `filename` | string | ✓ | 附件文件名（如 `"report.pdf"`） |
+| `content_type` | string | ✓ | MIME 类型（如 `"application/pdf"`） |
+| `content` | string | ✓ | 附件内容（字符串格式） |
+| `inline` | boolean | ✗ | 是否为内联附件 |
+| `cid` | string | ✗ | 内联附件的 Content-ID |
+
+### 脚本示例
+
+#### 1. 发送简单邮件
+
+```javascript
+let result = Process("mail.send", 
+    "email", 
+    "user@example.com", 
+    "测试邮件", 
+    "这是一封测试邮件"
+);
+log.Info("发送结果", result);
+// { "success": true, "channel": "email", "recipients": ["user@example.com"], "subject": "测试邮件" }
+```
+
+#### 2. 发送 HTML 邮件
+
+```javascript
+let result = Process("mail.send",
+    "email",
+    "user@example.com",
+    "HTML 邮件测试",
+    "这是纯文本版本",
+    "<h1>这是 HTML 版本</h1><p>支持 <strong>富文本</strong> 格式</p>"
+);
+```
+
+#### 3. 发送给多个收件人
+
+```javascript
+let recipients = ["admin@example.com", "user1@example.com", "user2@example.com"];
+let result = Process("mail.send",
+    "email",
+    recipients,
+    "批量通知",
+    "这是一封发送给多个收件人的邮件"
+);
+```
+
+#### 4. 发送带附件的邮件
+
+```javascript
+let result = Process("mail.send",
+    "email",
+    "user@example.com",
+    "带附件的邮件",
+    "请查收附件",
+    "<p>请查收附件</p>",
+    [
+        {
+            "filename": "report.pdf",
+            "content_type": "application/pdf",
+            "content": "PDF_CONTENT_BASE64_OR_PLAIN"
+        },
+        {
+            "filename": "image.png",
+            "content_type": "image/png",
+            "content": "IMAGE_CONTENT",
+            "inline": true,
+            "cid": "img001"
+        }
+    ]
+);
+```
+
+#### 5. 在业务逻辑中使用
+
+```javascript
+function onOrderCreated(order) {
+    // 发送通知邮件给管理员
+    Process("mail.send",
+        "email",
+        order.adminEmail,
+        `新订单通知 #${order.id}`,
+        `订单 ${order.id} 已创建，金额: ${order.amount}`,
+        `<h2>新订单 #${order.id}</h2><p>金额: <strong>${order.amount}</strong></p>`
+    );
+    
+    // 发送确认邮件给客户
+    Process("mail.send",
+        "email",
+        order.customerEmail,
+        "订单确认",
+        `感谢您的订单 #${order.id}`,
+        `<h1>感谢您的订单</h1><p>订单号: ${order.id}</p>`
+    );
+    
+    return "ok";
+}
+```
+
+#### 6. 错误处理
+
+```javascript
+function sendNotification(email, subject, body) {
+    try {
+        let result = Process("mail.send", "email", email, subject, body);
+        log.Info("邮件发送成功: %s -> %s", subject, email);
+        return result;
+    } catch (e) {
+        log.Error("邮件发送失败: %s -> %s, 错误: %s", subject, email, e);
+        // 可以记录到数据库或触发告警
+        return { success: false, error: e };
+    }
 }
 ```
 
