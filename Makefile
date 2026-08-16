@@ -523,8 +523,8 @@ artifacts-linux: clean
 #	Building CUI v1.0
 	export NODE_ENV=production
 # 	rm -f ../cui-v1.0/pnpm-lock.yaml
-	echo "BASE=__yao_admin_root" > /home/code/cui-v1.0/packages/cui/.env
-	cd /home/code/cui-v1.0 && pnpm install --no-frozen-lockfile && pnpm run build
+#	echo "BASE=__yao_admin_root" > /home/project/yaocodes/cui-v1.0/packages/cui/.env
+	cd /home/project/yaocodes/cui-v1.0 && pnpm install --no-frozen-lockfile && pnpm run build
 
 #	Init Application
 	cd /home/project/yaocodes/yao/
@@ -552,7 +552,7 @@ artifacts-linux: clean
 #   ** new repository: https://github.com/YaoApp/cui.git **
 	mkdir -p .tmp/data/cui
 	cp -r ./ui .tmp/data/ui
-	cp -r /home/code/cui-v1.0/packages/cui/dist .tmp/data/cui/v1.0
+	cp -r /home/project/yaocodes/cui-v1.0/packages/cui/dist .tmp/data/cui/v1.0
 	cd /home/project/yaocodes/yao/
 	
 	cp -r ../yao-init .tmp/data/init
@@ -563,7 +563,7 @@ artifacts-linux: clean
 
 #	Replace PRVERSION
 	sed -ie "s/const PRVERSION = \"DEV\"/const PRVERSION = \"${COMMIT}-${NOW}\"/g" share/const.go
-	@CUI_COMMIT=$$(cd /home/code/cui-v1.0 && git log | head -n 1 | awk '{print substr($$2, 0, 12)}') && \
+	@CUI_COMMIT=$$(cd /home/project/yaocodes/cui-v1.0 && git log | head -n 1 | awk '{print substr($$2, 0, 12)}') && \
 	sed -ie "s/const PRCUI = \"DEV\"/const PRCUI = \"$$CUI_COMMIT-${NOW}\"/g" share/const.go
 	cd /home/project/yaocodes/yao/
 #   Making artifacts - dev builds (full debug symbols, ~158M)
@@ -917,4 +917,4 @@ clean:
 build:
 	rm -rf dist/release/yao
 	CGO_ENABLED=1 CGO_LDFLAGS="-static" go build -v -o dist/release/yao
-	chmod +x  dist/release/yao	
+	chmod +x  dist/release/yao
