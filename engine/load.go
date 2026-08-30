@@ -36,6 +36,7 @@ import (
 	"github.com/yaoapp/yao/model"
 	localevent "github.com/yaoapp/yao/mqs/local"
 	_ "github.com/yaoapp/yao/mqs/mail" // register mail.send process handler
+	"github.com/yaoapp/yao/mqs/kafka"
 	"github.com/yaoapp/yao/mqs/mqtt"
 	"github.com/yaoapp/yao/openapi"
 	"github.com/yaoapp/yao/pack"
@@ -324,6 +325,14 @@ func Load(cfg config.Config, options LoadOption, progressCallback ...func(string
 	}, callback)
 	if err != nil {
 		warnings = append(warnings, Warning{Widget: "MQTT", Error: err})
+	}
+
+	// Load kafka
+	err = loadStep("Kafka", func() error {
+		return kafka.Load(cfg)
+	}, callback)
+	if err != nil {
+		warnings = append(warnings, Warning{Widget: "Kafka", Error: err})
 	}
 
 	// Load local events
@@ -634,6 +643,11 @@ func Reload(cfg config.Config, options LoadOption) (err error) {
 	err = mqtt.Load(cfg)
 	if err != nil {
 		printErr(cfg.Mode, "MQTT Event", err)
+	}
+
+	err = kafka.Load(cfg)
+	if err != nil {
+		printErr(cfg.Mode, "Kafka", err)
 	}
 
 	err = localevent.Load()

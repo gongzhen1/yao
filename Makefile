@@ -865,40 +865,43 @@ linux-release: clean
 	mkdir .tmp
 
 #	Building CUI v1.0
-#   ** CUI will be renamed to CUI in the feature. and move to the new repository. **
-#   ** new repository: https://github.com/YaoApp/cui.git **
 	export NODE_ENV=production
-	git clone https://github.com/YaoApp/cui.git .tmp/cui/v1.0
-	rm -f .tmp/cui/v1.0/pnpm-lock.yaml
-	echo "BASE=__yao_admin_root" > .tmp/cui/v1.0/packages/cui/.env
-	cd .tmp/cui/v1.0 && pnpm install --no-frozen-lockfile && pnpm run build
+# 	rm -f ../cui-v1.0/pnpm-lock.yaml
+#	echo "BASE=__yao_admin_root" > /home/project/yaocodes/cui-v1.0/packages/cui/.env
+	cd /home/project/yaocodes/cui-v1.0 && pnpm install --no-frozen-lockfile && pnpm run build
 
-#   Setup UI
-	cd .tmp/cui/v1.0/packages/setup  && pnpm install --no-frozen-lockfile && pnpm run build
+#	Init Application
+	cd /home/project/yaocodes/yao/
+	cd ../yao-init && rm -rf .git
+	cd ../yao-init && rm -rf .gitignore
+	cd ../yao-init && rm -rf LICENSE
+#	cd ../yao-init rm -rf README.md
 
-
-#	Checkout init
-	git clone https://github.com/YaoApp/yao-init.git .tmp/yao-init
-	rm -rf .tmp/yao-init/.git
-	rm -rf .tmp/yao-init/.gitignore
-	rm -rf .tmp/yao-init/LICENSE
-	rm -rf .tmp/yao-init/README.md
+#	Switch .env login URLs from dev mode (__yao_admin_root) to release mode (dashboard)
+	sed -i.bak 's|AFTER_LOGIN_SUCCESS_URL="/__yao_admin_root/|# AFTER_LOGIN_SUCCESS_URL="/__yao_admin_root/|g' ../yao-init/.env
+	sed -i.bak 's|AFTER_LOGIN_FAILURE_URL="/__yao_admin_root/|# AFTER_LOGIN_FAILURE_URL="/__yao_admin_root/|g' ../yao-init/.env
+	sed -i.bak 's|# AFTER_LOGIN_SUCCESS_URL="/dashboard/|AFTER_LOGIN_SUCCESS_URL="/dashboard/|g' ../yao-init/.env
+	sed -i.bak 's|# AFTER_LOGIN_FAILURE_URL="/dashboard/|AFTER_LOGIN_FAILURE_URL="/dashboard/|g' ../yao-init/.env
+	rm -f ../yao-init/.env.bak
 
 #   Yao Builder
 #   Remove Yao Builder - DUI PageBuilder component will provide online design for pure HTML pages or SUI pages in the future.
-# 	mkdir -p .tmp/data/builder
-# 	curl -o .tmp/yao-builder-latest.tar.gz https://release-sv.yaoapps.com/archives/yao-builder-latest.tar.gz
-# 	tar -zxvf .tmp/yao-builder-latest.tar.gz -C .tmp/data/builder
-# 	rm -rf .tmp/yao-builder-latest.tar.gz
+#	mkdir -p .tmp/data/builder
+#	curl -o .tmp/yao-builder-latest.tar.gz https://release-sv.yaoapps.com/archives/yao-builder-latest.tar.gz
+#	tar -zxvf .tmp/yao-builder-latest.tar.gz -C .tmp/data/builder
+#	rm -rf .tmp/yao-builder-latest.tar.gz
 
 #	Packing
+#   ** CUI will be renamed to CUI in the feature. and move to the new repository. **
+#   ** new repository: https://github.com/YaoApp/cui.git **
 	mkdir -p .tmp/data/cui
 	cp -r ./ui .tmp/data/ui
-	cp -r ./yao .tmp/data/yao
-	cp -r .tmp/cui/v0.9/dist .tmp/data/cui/v0.9
-	cp -r .tmp/cui/v1.0/packages/setup/build .tmp/data/cui/setup
-	cp -r .tmp/cui/v1.0/packages/cui/dist .tmp/data/cui/v1.0
-	cp -r .tmp/yao-init .tmp/data/init
+	cp -r /home/project/yaocodes/cui-v1.0/packages/cui/dist .tmp/data/cui/v1.0
+	cd /home/project/yaocodes/yao/
+	
+	cp -r ../yao-init .tmp/data/init
+	cp -r yao .tmp/data/
+	cp -r sui/libsui .tmp/data/
 	go-bindata -fs -pkg data -o data/bindata.go -prefix ".tmp/data/" .tmp/data/...
 	rm -rf .tmp/data
 	rm -rf .tmp/cui
