@@ -47,12 +47,21 @@ func Load(cfg config.Config) error {
 		if isdir {
 			return nil
 		}
-		_, err := websocket.LoadWebSocket(file, share.ID(root, file))
+		content := share.ReadFile(file)
+		ws, err := websocket.LoadWebSocket(string(content), share.ID(root, file))
 		if err != nil {
 			log.With(log.F{"root": root, "file": file}).Error(err.Error())
+			return nil
 		}
+		// 自动打开客户端连接（非阻塞）
+		go func() {
+			name := share.ID(root, file)
+			log.Info("[websocket] client %s connecting...", name)
+			if err := ws.Open(); err != nil {
+				log.Error("[websocket] client %s error: %v", name, err)
+			}
+		}()
 		return nil // 继续加载其他文件
 	}, exts...)
-	return err
 	return err
 }
