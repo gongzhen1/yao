@@ -898,7 +898,7 @@ func (manager Manager) List(ctx context.Context, option ListOption) (*ListResult
 	}, nil
 }
 
-// validate validates the file and option
+// makeFile validates the file and option
 func (manager Manager) makeFile(file *FileHeader, option UploadOption) (*File, error) {
 
 	// Validate max size
