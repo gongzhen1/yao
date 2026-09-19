@@ -8,13 +8,67 @@ import (
 	"time"
 
 	"github.com/dchest/captcha"
+	"github.com/yaoapp/gou/session"
 	"github.com/yaoapp/kun/log"
 )
 
-var store = captcha.NewMemoryStore(1024, 10*time.Minute)
+// store captcha answers in the generic yao session.
+// The session backend (redis | file) is decided by config.Conf.Session.Store,
+// which makes captcha validation work across multiple instances when redis is used.
+var store captcha.Store = sessionStore{}
 
 func init() {
 	captcha.SetCustomStore(store)
+}
+
+// sessionStore implements the captcha.Store interface on top of the generic session.
+type sessionStore struct{}
+
+// Set stores the digits for the captcha id into the session.
+func (s sessionStore) Set(id string, digits []byte) {
+	// Keep the same 10 minutes expiration as the original memory store.
+	err := session.Global().Expire(10*time.Minute).ID(id).Set("captcha", toString(digits))
+	if err != nil {
+		log.Error("captcha store: %s", err.Error())
+	}
+}
+
+// Get returns stored digits for the captcha id. Clear indicates
+// whether the captcha must be deleted from the store.
+func (s sessionStore) Get(id string, clear bool) []byte {
+	value, err := session.Global().ID(id).Get("captcha")
+	if err != nil {
+		log.Error("captcha store: %s", err.Error())
+		return nil
+	}
+	if value == nil {
+		return nil
+	}
+	if clear {
+		session.Global().ID(id).Del("captcha")
+	}
+	return toDigits(toStringOf(value))
+}
+
+// toStringOf converts the value returned by the session (string or []byte) into a string.
+func toStringOf(value interface{}) string {
+	switch v := value.(type) {
+	case string:
+		return v
+	case []byte:
+		return string(v)
+	default:
+		return ""
+	}
+}
+
+// toDigits converts the ASCII digit string back to the raw digit bytes.
+func toDigits(s string) []byte {
+	digits := make([]byte, len(s))
+	for i := 0; i < len(s); i++ {
+		digits[i] = s[i] - '0'
+	}
+	return digits
 }
 
 // Option 验证码配置

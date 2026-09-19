@@ -5,12 +5,15 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/caarlos0/env/v6"
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
+	"github.com/sirupsen/logrus"
 	"github.com/yaoapp/kun/exception"
 	"github.com/yaoapp/kun/log"
+	"github.com/yaoapp/yao/utils/kafkalog"
 	"gopkg.in/natefinch/lumberjack.v2"
 )
 
@@ -19,6 +22,9 @@ var Conf Config
 
 // LogOutput 日志输出
 var LogOutput io.WriteCloser // 日志文件
+
+// kafkaLogHook kafka 日志 hook（YAO_LOG_STORE=kafka.<connectName> 时启用）
+var kafkaLogHook *kafkalog.Hook
 
 // DSLExtensions the dsl file Extensions
 var DSLExtensions = []string{"*.yao", "*.json", "*.jsonc"}
@@ -231,6 +237,62 @@ func ReloadLog() {
 	OpenLog()
 }
 
+// filterWriter 包裹日志输出，丢弃「写日志表自身」产生的 SQL 日志行。
+// 这类日志是写入日志表这个动作的副作用，bindings 里又重复携带了整行数据，
+// 落到日志文件里只是纯噪声（上报链路已在 hook 里同样剔除）
+type filterWriter struct{ w io.Writer }
+
+func (f *filterWriter) Write(p []byte) (int, error) {
+	// 绝大多数日志不含该特征，走快路径直接透传
+	if !kafkalog.IsSelfInsertLogLine(string(p)) {
+		if _, err := f.w.Write(p); err != nil {
+			return 0, err
+		}
+		return len(p), nil
+	}
+
+	out := make([]byte, 0, len(p))
+	for _, line := range strings.SplitAfter(string(p), "\n") {
+		if line != "" && line != "\n" && kafkalog.IsSelfInsertLogLine(line) {
+			continue
+		}
+		out = append(out, line...)
+	}
+	if len(out) > 0 {
+		if _, err := f.w.Write(out); err != nil {
+			return 0, err
+		}
+	}
+	// 丢弃的行也按已写入原始长度返回，避免上层把过滤当成写失败
+	return len(p), nil
+}
+
+func (f *filterWriter) Close() error {
+	if c, ok := f.w.(io.Closer); ok {
+		return c.Close()
+	}
+	return nil
+}
+
+// logrusWriter 把写入的内容按行转发给 logrus。
+// GIN 的访问日志由 gin.DefaultWriter 直接写文件、不经过 logrus，因此这些日志只会出现在
+// 本地日志文件里，不会经由 logrus hook 上报 Kafka、也就写不进 yao_log 表，
+// 表现为「数据库日志比文件日志少一批 [GIN] 访问日志」。
+// 转发给 logrus 后，访问日志与其它日志走同一条链路（同时进文件与上报）。
+type logrusWriter struct{}
+
+func (logrusWriter) Write(p []byte) (int, error) {
+	for _, line := range strings.Split(strings.TrimRight(string(p), "\n"), "\n") {
+		if line == "" {
+			continue
+		}
+		// 直接调用 logrus 而不是 log.Info：log.Info 内部走 fmt.Sprintf，
+		// 会把访问日志 URL 里的 %xx 当成格式化占位符吃掉
+		logrus.Info(line)
+	}
+	return len(p), nil
+}
+
 // OpenLog 打开日志
 func OpenLog() {
 
@@ -253,20 +315,32 @@ func OpenLog() {
 	if _, err := os.Stat(logpath); errors.Is(err, os.ErrNotExist) {
 		LogOutput, _ := os.OpenFile(os.DevNull, os.O_WRONLY, 0666)
 		log.SetOutput(LogOutput)
-		gin.DefaultWriter = io.MultiWriter(LogOutput)
+		gin.DefaultWriter = logrusWriter{}
 		return
 	}
 
-	LogOutput = &lumberjack.Logger{
+	LogOutput = &filterWriter{w: &lumberjack.Logger{
 		Filename:   logfile,
 		MaxSize:    Conf.LogMaxSize, // megabytes
 		MaxBackups: Conf.LogMaxBackups,
 		MaxAge:     Conf.LogMaxAage, //days
 		LocalTime:  Conf.LogLocalTime,
-	}
+	}}
 
 	log.SetOutput(LogOutput)
-	gin.DefaultWriter = io.MultiWriter(LogOutput)
+	gin.DefaultWriter = logrusWriter{}
+
+	// 配置了 kafka 日志存储时，注册 logrus hook 将日志异步发送到 Kafka。
+	// hook 只创建一次：启动过程会多次 OpenLog（ReloadLog），重复创建会让同一条日志被多个 hook
+	// 重复序列化，且旧 hook 无法从 logrus 注销
+	if strings.HasPrefix(Conf.LogStore, "kafka.") {
+		clientName := strings.TrimPrefix(Conf.LogStore, "kafka.")
+		if kafkaLogHook == nil {
+			kafkaLogHook = kafkalog.New(clientName, Conf.LogKafkaTopic)
+			logrus.StandardLogger().AddHook(kafkaLogHook)
+			kafkaLogHook.Start()
+		}
+	}
 }
 
 // CloseLog 关闭日志
@@ -278,6 +352,14 @@ func CloseLog() {
 			return
 		}
 	}
+
+	// 这里不再关闭 Kafka hook：CloseLog 只被 ReloadLog（配置加载、Production/Development 切换）调用，
+	// 紧接着就会 OpenLog，而启动过程会 ReloadLog 多次。若在此关闭并置空 hook，会带来两个问题：
+	//   ① 旧 hook 已经通过 AddHook 注册进 logrus 且无法移除，成为只进不出的僵尸 hook：
+	//      每条日志被重复序列化，其队列最终写满并持续刷「queue is full」告警；
+	//   ② 旧 hook 队列里尚未发出的日志，会在「连接器还没加载完 + stop 已关闭」时被整批丢弃
+	//      （实测重启瞬间丢 17 条：文件里有、数据库里没有）。
+	// hook 改为随进程生命周期存续，由 OpenLog 按「已存在即复用」的方式幂等处理。
 }
 
 // IsDevelopment returns true if the current mode is development
