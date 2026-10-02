@@ -53,6 +53,10 @@ type FilterLayoutDSL struct {
 }
 
 // ViewLayoutDSL layout.form
+//
+// Mode 为空或 "flow" 时是 24 栅格流式布局；为 "absolute" 时按 InstanceDSL 的
+// X/Y/Width/Height(像素) 绝对定位渲染。
 type ViewLayoutDSL struct {
+	Mode    string              `json:"mode,omitempty"`
 	Columns component.Instances `json:"columns,omitempty"`
 }

@@ -16,8 +16,14 @@ type Actions []ActionDSL
 type Instances []InstanceDSL
 
 // InstanceDSL the component instance DSL
+//
+// Width/Height 在流式布局(默认)里是 24 栅格列宽，在绝对定位布局(mode=absolute)
+// 里是像素宽高；X/Y 仅用于绝对定位布局，表示相对父容器的左上角像素偏移。
 type InstanceDSL struct {
 	Name   string        `json:"name,omitempty"`
+	Title  string        `json:"title,omitempty"` // 容器标题(绝对定位布局)
+	X      interface{}   `json:"x,omitempty"`
+	Y      interface{}   `json:"y,omitempty"`
 	Width  interface{}   `json:"width,omitempty"`
 	Height interface{}   `json:"height,omitempty"`
 	Fixed  bool          `json:"fixed,omitempty"` // for widget table
