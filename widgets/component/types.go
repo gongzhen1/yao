@@ -56,6 +56,7 @@ type ActionDSL struct {
 	Confirm      *ConfirmActionDSL `json:"confirm,omitempty"`
 	Action       ActionNodes       `json:"action,omitempty"`
 	Disabled     *DisabledDSL      `json:"disabled,omitempty"`
+	Hidden       string            `json:"hidden,omitempty"` // 支持模板：{{^can_xxx}}1{{/can_xxx}} 等，真值时隐藏
 }
 
 // DisabledDSL the action disabled
